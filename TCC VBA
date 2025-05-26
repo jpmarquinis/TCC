@@ -1,0 +1,68 @@
+Sub Operador_Pedido_Errado()
+    Dim wsMondial As Worksheet, wsAmazon As Worksheet, wsDestino As Worksheet
+    Dim ultimaLinhaMondial As Long, ultimaLinhaAmazon As Long, ultimaLinhaDestino As Long
+    Dim notaFiscal As String
+    Dim pedido As String, SKU As String, quantidadeMondial As Double, quantidadeAmazon As Double
+    Dim i As Long, j As Long
+    Dim somaMondial As Double, somaAmazon As Double
+    Dim resultado As String
+    Dim output As String
+    
+    ' Definir as planilhas
+    Set wsMondial = ThisWorkbook.Sheets("Visão Mondial")
+    Set wsAmazon = ThisWorkbook.Sheets("Visão Amazon")
+    Set wsDestino = ThisWorkbook.Sheets("Visão Operador") ' Planilha de destino para os resultados
+    
+    ' Encontrar a última linha de dados
+    ultimaLinhaMondial = wsMondial.Cells(wsMondial.Rows.Count, 14).End(xlUp).Row ' Coluna N (14) de "Visão Mondial"
+    ultimaLinhaAmazon = wsAmazon.Cells(wsAmazon.Rows.Count, 1).End(xlUp).Row ' Coluna A (1) de "Visão Amazon"
+    ultimaLinhaDestino = wsDestino.Cells(wsDestino.Rows.Count, 1).End(xlUp).Row ' Coluna A (1) de "Sheet1"
+    
+    ' Percorrer os inputs na coluna A de "Sheet1"
+    For i = 2 To ultimaLinhaDestino ' Começando da linha 2, já que a linha 1 é cabeçalho
+        notaFiscal = wsDestino.Cells(i, 1).Value ' Nota fiscal na coluna A
+        
+        ' Inicializar variáveis para soma das quantidades
+        somaMondial = 0
+        somaAmazon = 0
+        
+        ' Inicializar variáveis para identificar os pedidos com excesso de faturamento
+        output = ""
+        
+        ' Buscar os dados da aba "Visão Mondial" para todas as combinações de pedido + SKU
+        For j = 2 To ultimaLinhaMondial ' Começar da linha 2 de "Visão Mondial"
+            If wsMondial.Cells(j, 14).Value = notaFiscal Then ' Comparar com a Nota Fiscal
+                pedido = wsMondial.Cells(j, 3).Value ' Coluna C (Pedido)
+                SKU = wsMondial.Cells(j, 5).Value ' Coluna E (SKU)
+                quantidadeMondial = wsMondial.Cells(j, 8).Value ' Coluna H (Quantidade)
+                
+                ' Somar a quantidade de Mondial para essa chave pedido + SKU
+                somaMondial = somaMondial + quantidadeMondial
+            End If
+        Next j
+        
+        ' Buscar os dados da aba "Visão Amazon" para a mesma combinação de pedido e SKU
+        For j = 2 To ultimaLinhaAmazon ' Começar da linha 2 de "Visão Amazon"
+            If wsAmazon.Cells(j, 1).Value = pedido And wsAmazon.Cells(j, 2).Value = SKU Then
+                quantidadeAmazon = wsAmazon.Cells(j, 6).Value ' Coluna F (Quantidade)
+                
+                ' Somar a quantidade de Amazon para essa chave pedido + SKU
+                somaAmazon = somaAmazon + quantidadeAmazon
+            End If
+        Next j
+        
+        ' Comparar as somas das quantidades e emitir o resultado
+        If somaMondial > somaAmazon Then
+            ' Se Mondial for maior, o resultado será para revisar o faturamento
+            output = "Revisar Faturamento | PO: " & pedido & " SKU: " & SKU
+        Else
+            ' Caso contrário, seguir com agendamento
+            output = "Seguir agendamento"
+        End If
+        
+        ' Exibir o resultado na coluna B de "Sheet1"
+        wsDestino.Cells(i, 2).Value = output
+    Next i
+    
+    MsgBox "Verificação concluída!", vbInformation, "Processo Concluído"
+End Sub
